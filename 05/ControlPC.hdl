@@ -1,0 +1,20 @@
+/**
+ * Control Unit for Hack PC.
+ */
+ CHIP ControlPC {
+    IN jump[3], type, zr, ng;
+    OUT loadPC, inc;
+    
+    PARTS:
+    // Determine JMP condition, lt := out < 0, zr := out == 0
+    Or(a=ng, b=zr, out=lte);
+    Not(in=lte, out=gt);
+
+    And(a=jump[1], b=zr, out=jeq); // if JEQ and out == 0
+    And(a=jump[2], b=ng, out=jlt); // if JLT and out < 0
+    And(a=jump[0], b=gt, out=jgt); // if JGT and out > 0       
+    Or(a=jlt, b=jeq, out=jle);
+    Or(a=jle, b=jgt, out=jmp);
+    And(a=type, b=jmp, out=loadPCint, out=loadPC); // only load PC if C-inst and other conditions met
+    Not(in=loadPCint, out=inc);
+ }

@@ -1,0 +1,50 @@
+/**
+ * Control Unit for Hack CPU.
+ */
+ CHIP CU {
+    IN type, address[15], a, comp[6], dest[3];
+    OUT writeM, loadA, loadD, selAM, selInA, aluCtl[6];
+    
+    PARTS:
+    // If type=0 (A instruction) set A to address
+    // Instruction format
+    //
+    // 1aaaaaaaaaaaaaaa
+    // 1111119876543210
+    // 543210
+    // type=0 => writeM=0, loadA=1, loadD=0, selAM=DC, selInA=1, loadPC=0, inc=1, aluCtl = DC
+
+    // If type=1 (C instruction)
+    // Instruction format
+    //
+    // 111accccccdddjjj
+    // 1111119876543210
+    // 543210
+    // type=1 => writeM=dest[0], loadA=dest[2], loadD=dest[1], selAM=a, selInA=0, loadPC=(j[2] == 1 && ng ==1 || j[1] == 1 && zr == 1 || j[0] == 1 && (ng == 0 && zr == 0)),
+    // inc=if(jump==0), zx=comp[5], nx=comp[4], zy=comp[3], ny=comp[2], f=comp[1], no=comp[0]
+
+    // Overall equation
+    //
+    // writeM = type and dest[0]
+    // loadA = not(type) or dest[2]
+    // loadD = type and dest[1]
+    // selAM = a
+    // selInA= not(type)
+    // loadPC = type and ((j[2] and ng) or (j[1] and zr) or (j[0] and not(ng) and not(zr))) = 
+    // loadPC = type and ((j[2] and ng) or (j[1] and zr) or not(not(j[0]) or ng or zr))  
+    // inc = not(type) or (not(jump[2]) and not (jump[1]) and not(jump[0])) =
+    // inc = not(type) or not(jump[2] or jump[1] or jump[0]) =
+    // inc = not(type and (jump[2] or jump[1] or jump[0]))
+    // aluCtl = comp
+    And(a=type, b=dest[0], out=writeM);
+    Or(a=notType, b=dest[2], out=loadA);
+    Not(in=type, out=notType, out=selInA);
+    And(a=type, b=dest[1], out=loadD);
+    And(a=a, b=true, out=selAM);
+    And(a=comp[5], b=true, out=aluCtl[5]);
+    And(a=comp[4], b=true, out=aluCtl[4]);
+    And(a=comp[3], b=true, out=aluCtl[3]);
+    And(a=comp[2], b=true, out=aluCtl[2]);
+    And(a=comp[1], b=true, out=aluCtl[1]);
+    And(a=comp[0], b=true, out=aluCtl[0]);
+ }
