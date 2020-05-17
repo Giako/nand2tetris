@@ -7,7 +7,7 @@ public class Assembler {
     private Parser parser;
 
     public static void main(String[] args) {
-        if (args.length != 2) {
+        if (args.length != 1) {
             System.out.println("Provide at least one file to process");
             //noinspection SpellCheckingInspection
             System.out.println("Example: java -jar Assembler.jar Prog.asm");
@@ -15,7 +15,7 @@ public class Assembler {
         }
 
         var assembler = new Assembler();
-        var asmFilename = args[1];
+        var asmFilename = args[0];
         var outputFilename = asmFilename.replaceAll("\\.asm$", "").concat(OUTPUT_FILENAME_EXT);
         assembler.run(asmFilename, outputFilename);
     }
@@ -24,7 +24,7 @@ public class Assembler {
 
         try (
                 BufferedReader br = new BufferedReader(new FileReader(inputFilename));
-                PrintWriter writer = new PrintWriter(new FileWriter(outputFilename, true))
+                PrintWriter writer = new PrintWriter(new FileWriter(outputFilename))
         ) {
             parser = new Parser(br);
 
