@@ -11,8 +11,8 @@ import java.util.regex.Pattern;
  */
 public class Parser {
     private static final Pattern C_COMMAND = Pattern.compile("((\\w+)=)?([\\w-+!&|]+)(;(\\w+))?");
-    private static final Pattern A_COMMAND = Pattern.compile("@(\\w+)");
-    private static final Pattern L_COMMAND = Pattern.compile("\\((\\w+)\\)");
+    private static final Pattern A_COMMAND = Pattern.compile("@([\\w.:$]+)");
+    private static final Pattern L_COMMAND = Pattern.compile("\\(([\\w.:$]+)\\)");
     private final BufferedReader bufferedReader;
     private String line;
 
