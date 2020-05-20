@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="assembler:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/assembler_jar</output-path>
-    <root id="archive" name="assembler.jar">
-      <element id="module-output" name="assembler" />
-    </root>
-  </artifact>
-</component>
