@@ -2,7 +2,6 @@ package dev.giako;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -76,22 +75,24 @@ public class Parser {
      *
      * @return the symbol or decimal
      */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public String getSymbol() {
         switch (getCommandType()) {
             case A_COMMAND:
-                var aMatcher = A_COMMAND.matcher(line);
-                aMatcher.matches();
-                return aMatcher.group(1);
+                return getGroupInCurrentLine(A_COMMAND, 1);
 
             case L_COMMAND:
-                var lMatcher = L_COMMAND.matcher(line);
-                lMatcher.matches();
-                return lMatcher.group(1);
+                return getGroupInCurrentLine(L_COMMAND, 1);
 
             default:
                 throw new UnsupportedOperationException("Current command is neither A-command or L-command");
         }
+    }
+
+    private String getGroupInCurrentLine(Pattern pattern, int groupNumber) {
+        var matcher = pattern.matcher(line);
+        //noinspection ResultOfMethodCallIgnored
+        matcher.matches();
+        return matcher.group(groupNumber);
     }
 
     /**
@@ -100,15 +101,12 @@ public class Parser {
      *
      * @return the dest mnemonic
      */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public String getDest() {
         // dest=comp;jump
         // dest=comp
         // comp;jump
         // comp
-        Matcher matcher = C_COMMAND.matcher(line);
-        matcher.matches();
-        var dest = matcher.group(2);
+        var dest = getGroupInCurrentLine(C_COMMAND, 2);
 
         if (dest == null || dest.length() == 0) {
             return "null";
@@ -123,16 +121,12 @@ public class Parser {
      *
      * @return the comp mnemonic
      */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public String getComp() {
         // dest=comp;jump
         // dest=comp
         // comp;jump
         // comp
-        Matcher matcher = C_COMMAND.matcher(line);
-        matcher.matches();
-
-        return matcher.group(3);
+        return getGroupInCurrentLine(C_COMMAND, 3);
     }
 
     /**
@@ -141,15 +135,12 @@ public class Parser {
      *
      * @return the jump mnemonic
      */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public String getJump() {
         // dest=comp;jump
         // dest=comp
         // comp;jump
         // comp
-        Matcher matcher = C_COMMAND.matcher(line);
-        matcher.matches();
-        var jump = matcher.group(5);
+        var jump =  getGroupInCurrentLine(C_COMMAND, 5);
 
         if (jump == null || jump.length() == 0) {
             return "null";
