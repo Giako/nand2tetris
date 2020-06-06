@@ -24,7 +24,9 @@ public class VmTranslator {
         File[] files;
 
         if (fileArgument.exists() && fileArgument.isDirectory()) {
-            files = fileArgument.listFiles((dir, name) -> name.endsWith(INPUT_FILENAME_EXT)); }
+            files = fileArgument.listFiles((dir, name) -> name.endsWith(INPUT_FILENAME_EXT));
+            outputFilename = String.format("%s/%s", fileArgument.getAbsolutePath(), outputFilename);
+        }
         else if (fileArgument.exists() && fileArgument.isFile()) {
             files = new File[1];
             files[0] = fileArgument;
