@@ -13,6 +13,7 @@ public class CodeWriter implements Closeable {
 
     /**
      * Opens the input file/stream and gets ready to write into it.
+     *
      * @param printWriter a PrintWriter for writing the output file
      */
     public CodeWriter(PrintWriter printWriter) {
@@ -21,6 +22,7 @@ public class CodeWriter implements Closeable {
 
     /**
      * Informs the code writer that the translation of a new VM file is started.
+     *
      * @param fileName the name of the file to write
      */
     public void setFileName(String fileName) {
@@ -29,6 +31,7 @@ public class CodeWriter implements Closeable {
 
     /**
      * Writes the assembly code that is the translation of the given arithmetic command.
+     *
      * @param command the arithmetic command to translate
      */
     public void writeArithmetic(String command) {
@@ -38,7 +41,7 @@ public class CodeWriter implements Closeable {
 
                 // Retrieve second topmost element on stack and add it to register, and store result on second topmost
                 // element
-                decrementARegister(1); // @SP-2
+                decreaseARegister();
                 printWriter.println("M=D+M");
 
                 decreaseSP();
@@ -49,7 +52,7 @@ public class CodeWriter implements Closeable {
 
                 // Retrieve second topmost element on stack and subtract it from register, and store result on second
                 // topmost element
-                decrementARegister(1); // @SP-2
+                decreaseARegister();
                 printWriter.println("M=M-D");
 
                 decreaseSP();
@@ -79,7 +82,7 @@ public class CodeWriter implements Closeable {
 
                 // Retrieve second topmost element on stack and AND it to register, and store result on second topmost
                 // element
-                decrementARegister(1); // @SP-2
+                decreaseARegister();
                 printWriter.println("M=D&M");
 
                 decreaseSP();
@@ -90,7 +93,7 @@ public class CodeWriter implements Closeable {
 
                 // Retrieve second topmost element on stack and AND it to register, and store result on second topmost
                 // element
-                decrementARegister(1); // @SP-2
+                decreaseARegister();
                 printWriter.println("M=D|M");
 
                 decreaseSP();
@@ -108,10 +111,8 @@ public class CodeWriter implements Closeable {
         }
     }
 
-    private void decrementARegister(int amount) {
-        for (int i = 0; i < amount; i++) {
-            printWriter.println("A=A-1");
-        }
+    private void decreaseARegister() {
+        printWriter.println("A=A-1"); // @SP-2
     }
 
     private void decreaseSP() {
@@ -120,9 +121,7 @@ public class CodeWriter implements Closeable {
     }
 
     private void addressTopmostStackElementAndStoreInDRegister() {
-        printWriter.println("@SP");
-        printWriter.println("A=M");
-        decrementARegister(1); // @SP-1
+        addressSPMinusOffset(1);
         printWriter.println("D=M");
     }
 
@@ -130,53 +129,156 @@ public class CodeWriter implements Closeable {
         addressTopmostStackElementAndStoreInDRegister();
 
         // Retrieve second topmost element on stack and subtract it from register, and store result in D
-        decrementARegister(1); // @SP-2
+        decreaseARegister();
         printWriter.println("D=M-D");
 
         // If D is/is greater than/is lesser than zero, return true (-1) else return false (0)
         printWriter.println(String.format("@LOGIC_%d", labelLogicNumber));
         printWriter.println(String.format("D;%s", jmp));
-
-        // @SP-2
-        printWriter.println("@SP");
-        printWriter.println("A=M");
-        decrementARegister(2);
-
+        addressSPMinusOffset(2);
         printWriter.println("M=0");
         printWriter.println(String.format("@END_LOGIC_%d", labelLogicNumber));
         printWriter.println("0;JMP");
         printWriter.println(String.format("(LOGIC_%d)", labelLogicNumber));
-
-        // @SP-2
-        printWriter.println("@SP");
-        printWriter.println("A=M");
-        decrementARegister(2);
-
+        addressSPMinusOffset(2);
         printWriter.println("M=-1");
         printWriter.println(String.format("(END_LOGIC_%d)", labelLogicNumber));
+
         decreaseSP();
+
         labelLogicNumber++;
     }
 
     /**
      * Writes the assembly code that is the translation of the given command, where command is either C_PUSH or C_POP.
+     *
      * @param command the command type, only C_PUSH or C_POP are supported
      * @param segment the segment argument of the command
-     * @param index the index argument of the command
+     * @param index   the index argument of the command
      */
     public void writePushPop(VmCommand command, String segment, int index) {
-        if (command != VmCommand.C_PUSH && !segment.equals("constant")) {
-            throw new UnsupportedOperationException("Only \"push constant N\" commands are supported");
+        switch (command) {
+            case C_PUSH:
+                pushValueOfSegmentOntoStack(segment, index);
+                break;
+
+            case C_POP:
+                popAndStoreInSegment(segment, index);
+                break;
+
+            default:
+                throw new UnsupportedOperationException("Wrong command passed, " +
+                        "this can handle only push or pop commands");
         }
 
-        // push constant index
-        // write constant in memory at position SP
+    }
+
+    private void pushValueOfSegmentOntoStack(String segment, int index) {
         printWriter.println(String.format("@%d", index));
-        printWriter.println("D=A");
-        printWriter.println("@SP");
-        printWriter.println("A=M");
+
+        // Store in D the value to push
+        switch (segment) {
+            case "constant":
+                printWriter.println("D=A");
+                break;
+
+            case "local":
+                retrieveValueFromSegmentAndStoreInD("LCL");
+                break;
+
+            case "argument":
+                retrieveValueFromSegmentAndStoreInD("ARG");
+                break;
+
+            case "this":
+                retrieveValueFromSegmentAndStoreInD("THIS");
+                break;
+
+            case "that":
+                retrieveValueFromSegmentAndStoreInD("THAT");
+                break;
+
+            case "temp":
+                printWriter.println("D=A");
+                printWriter.println("@R5");
+                printWriter.println("A=D+A");
+                printWriter.println("D=M");
+                break;
+
+            default:
+                throw new UnsupportedOperationException(String.format("Unsupported segment: %s", segment));
+        }
+
+        addressSPMinusOffset(0);
         printWriter.println("M=D");
         increaseSP();
+    }
+
+    private void retrieveValueFromSegmentAndStoreInD(String segmentPointer) {
+        printWriter.println("D=A");
+        printWriter.println(String.format("@%s", segmentPointer));
+        printWriter.println("A=D+M");
+        printWriter.println("D=M");
+    }
+
+    private void popAndStoreInSegment(String segment, int index) {
+        calculateAddressAndStoreInR13(segment, index);
+        addressSPMinusOffset(1);
+        printWriter.println("D=M");
+        printWriter.println("@R13");
+        printWriter.println("A=M");
+        printWriter.println("M=D");
+        decreaseSP();
+    }
+
+    private void addressSPMinusOffset(int offset) {
+        printWriter.println("@SP");
+        printWriter.println("A=M");
+
+        for (int i = 0; i < offset; i++) {
+            decreaseARegister();
+        }
+    }
+
+    private void calculateAddressAndStoreInR13(String segment, int index) {
+        printWriter.println(String.format("@%d", index));
+        printWriter.println("D=A");
+
+        switch (segment) {
+            case "constant":
+                throw new UnsupportedOperationException("Cannot pop on constant segment");
+
+            case "local":
+                printWriter.println("@LCL");
+                printWriter.println("A=M");
+                break;
+
+            case "argument":
+                printWriter.println("@ARG");
+                printWriter.println("A=M");
+                break;
+
+            case "this":
+                printWriter.println("@THIS");
+                printWriter.println("A=M");
+                break;
+
+            case "that":
+                printWriter.println("@THAT");
+                printWriter.println("A=M");
+                break;
+
+            case "temp":
+                printWriter.println("@R5");
+                break;
+
+            default:
+                throw new UnsupportedOperationException(String.format("Unsupported segment: %s", segment));
+        }
+
+        printWriter.println("D=D+A");
+        printWriter.println("@R13");
+        printWriter.println("M=D");
     }
 
     private void increaseSP() {
