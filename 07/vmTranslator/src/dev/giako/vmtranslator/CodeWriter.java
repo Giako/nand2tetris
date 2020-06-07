@@ -183,27 +183,29 @@ public class CodeWriter implements Closeable {
                 break;
 
             case "local":
-                retrieveValueFromSegmentAndStoreInD("LCL");
+                retrieveValueFromSegmentAndStoreInD("LCL", true);
                 break;
 
             case "argument":
-                retrieveValueFromSegmentAndStoreInD("ARG");
+                retrieveValueFromSegmentAndStoreInD("ARG", true);
                 break;
 
             case "this":
-                retrieveValueFromSegmentAndStoreInD("THIS");
+                retrieveValueFromSegmentAndStoreInD("THIS", true);
                 break;
 
             case "that":
-                retrieveValueFromSegmentAndStoreInD("THAT");
+                retrieveValueFromSegmentAndStoreInD("THAT", true);
                 break;
 
             case "temp":
-                printWriter.println("D=A");
-                printWriter.println("@R5");
-                printWriter.println("A=D+A");
-                printWriter.println("D=M");
+                retrieveValueFromSegmentAndStoreInD("R5", false);
                 break;
+
+            case "pointer":
+                retrieveValueFromSegmentAndStoreInD("R3", false);
+                break;
+
 
             default:
                 throw new UnsupportedOperationException(String.format("Unsupported segment: %s", segment));
@@ -214,10 +216,17 @@ public class CodeWriter implements Closeable {
         increaseSP();
     }
 
-    private void retrieveValueFromSegmentAndStoreInD(String segmentPointer) {
+    private void retrieveValueFromSegmentAndStoreInD(String segmentPointer, boolean dereferenceSegmentPointer) {
         printWriter.println("D=A");
         printWriter.println(String.format("@%s", segmentPointer));
-        printWriter.println("A=D+M");
+
+        if (dereferenceSegmentPointer) {
+            printWriter.println("A=D+M");
+        }
+        else {
+            printWriter.println("A=D+A");
+        }
+
         printWriter.println("D=M");
     }
 
@@ -270,6 +279,10 @@ public class CodeWriter implements Closeable {
 
             case "temp":
                 printWriter.println("@R5");
+                break;
+
+            case "pointer":
+                printWriter.println("@R3");
                 break;
 
             default:
