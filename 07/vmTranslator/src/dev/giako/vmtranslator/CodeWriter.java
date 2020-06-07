@@ -206,6 +206,10 @@ public class CodeWriter implements Closeable {
                 retrieveValueFromSegmentAndStoreInD("R3", false);
                 break;
 
+            case "static":
+                printWriter.println(String.format("@%s.%d", fileName, index));
+                printWriter.println("D=M");
+                break;
 
             default:
                 throw new UnsupportedOperationException(String.format("Unsupported segment: %s", segment));
@@ -250,48 +254,58 @@ public class CodeWriter implements Closeable {
     }
 
     private void calculateAddressAndStoreInR13(String segment, int index) {
-        printWriter.println(String.format("@%d", index));
-        printWriter.println("D=A");
 
         switch (segment) {
             case "constant":
                 throw new UnsupportedOperationException("Cannot pop on constant segment");
 
             case "local":
-                printWriter.println("@LCL");
-                printWriter.println("A=M");
+                calculateSegmentAndIndexAddress("LCL", index, true);
                 break;
 
             case "argument":
-                printWriter.println("@ARG");
-                printWriter.println("A=M");
+                calculateSegmentAndIndexAddress("ARG", index, true);
                 break;
 
             case "this":
-                printWriter.println("@THIS");
-                printWriter.println("A=M");
+                calculateSegmentAndIndexAddress("THIS", index, true);
                 break;
 
             case "that":
-                printWriter.println("@THAT");
-                printWriter.println("A=M");
+                calculateSegmentAndIndexAddress("THAT", index, true);
                 break;
 
             case "temp":
-                printWriter.println("@R5");
+                calculateSegmentAndIndexAddress("R5", index, false);
                 break;
 
             case "pointer":
-                printWriter.println("@R3");
+                calculateSegmentAndIndexAddress("R3", index, false);
+                break;
+
+            case "static":
+                printWriter.println(String.format("@%s.%d", fileName, index));
+                printWriter.println("D=A");
                 break;
 
             default:
                 throw new UnsupportedOperationException(String.format("Unsupported segment: %s", segment));
         }
 
-        printWriter.println("D=D+A");
         printWriter.println("@R13");
         printWriter.println("M=D");
+    }
+
+    private void calculateSegmentAndIndexAddress(String virtualRegister, int index, boolean dereferenceRegister) {
+        printWriter.println(String.format("@%d", index));
+        printWriter.println("D=A");
+        printWriter.println(String.format("@%s", virtualRegister));
+
+        if (dereferenceRegister) {
+            printWriter.println("A=M");
+        }
+
+        printWriter.println("D=D+A");
     }
 
     private void increaseSP() {

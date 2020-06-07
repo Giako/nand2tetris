@@ -46,7 +46,7 @@ public class VmTranslator {
                     files) {
                 var fileName = file.getName();
                 System.out.println(String.format("Parsing file: %s", fileName));
-                codeWriter.setFileName(fileName);
+                codeWriter.setFileName(fileName.replace(INPUT_FILENAME_EXT, ""));
                 parseFile(file, codeWriter);
                 System.out.println("Parsing done.");
             }
