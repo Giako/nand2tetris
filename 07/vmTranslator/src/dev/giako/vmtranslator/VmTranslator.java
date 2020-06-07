@@ -60,6 +60,7 @@ public class VmTranslator {
     private void parseFile(File file, CodeWriter codeWriter) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             Parser parser = new Parser(br);
+            codeWriter.writeInit();
 
             while (parser.hasMoreCommands()) {
                 switch (parser.getCommandType()) {
@@ -75,8 +76,32 @@ public class VmTranslator {
                         codeWriter.writePushPop(VmCommand.C_POP, parser.getArg1(), parser.getArg2());
                         break;
 
+                    case C_LABEL:
+                        codeWriter.writeLabel(parser.getArg1());
+                        break;
+
+                    case C_GOTO:
+                        codeWriter.writeGoto(parser.getArg1());
+                        break;
+
+                    case C_IF:
+                        codeWriter.writeIf(parser.getArg1());
+                        break;
+
+                    case C_CALL:
+                        codeWriter.writeCall(parser.getArg1(), parser.getArg2());
+                        break;
+
+                    case C_FUNCTION:
+                        codeWriter.writeFunction(parser.getArg1(), parser.getArg2());
+                        break;
+
+                    case C_RETURN:
+                        codeWriter.writeReturn();
+                        break;
+
                     default:
-                        throw new UnsupportedOperationException("Only arithmetic, push, pop commands are supported");
+                        throw new UnsupportedOperationException("Unknown command, cannot parse");
                 }
 
                 parser.advance();

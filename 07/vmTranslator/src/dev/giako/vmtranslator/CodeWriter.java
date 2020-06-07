@@ -10,6 +10,7 @@ public class CodeWriter implements Closeable {
     private final PrintWriter printWriter;
     private String fileName;
     private int labelLogicNumber = 0;
+    private String currentFunction = null;
 
     /**
      * Opens the input file/stream and gets ready to write into it.
@@ -320,5 +321,67 @@ public class CodeWriter implements Closeable {
         printWriter.close();
     }
 
-    // More routines will be added to this module in chapter 8
+    /**
+     * Writes assembly code that effects the VM initialization, also called bootstrap code. This code must be placed at
+     * the beginning of the output file.
+     */
+    public void writeInit() {
+        // TODO implement assembler
+    }
+
+    /**
+     * Writes assembly code that effects the label command.
+     * @param label the label string
+     */
+    public void writeLabel(String label) {
+        printWriter.println(String.format("(%s$%s)", currentFunction, label));
+    }
+
+    /**
+     * Writes assembly code that effects the goto command.
+     * @param label the label string to jump to
+     */
+    public void writeGoto(String label) {
+        printWriter.println(String.format("@%s$%s", currentFunction, label));
+        printWriter.println("0;JMP");
+    }
+
+    /**
+     * Writes assembly code that effects the if-goto command.
+     * @param label the label string to jump to
+     */
+    public void writeIf(String label) {
+        // pop value from the stack
+        addressSPMinusOffset(1);
+        printWriter.println("D=M");
+        decreaseSP();
+
+        printWriter.println(String.format("@%s$%s", currentFunction, label));
+        printWriter.println("D;JNE");
+    }
+
+    /**
+     * Writes assembly code that effects the call command.
+     * @param functionName the name of the function to call
+     * @param numArgs the number of arguments pushed to the stack
+     */
+    public void writeCall(String functionName, int numArgs) {
+        // TODO implement assembler
+    }
+
+    /**
+     * Writes assembly code that effects the return command.
+     */
+    public void writeReturn() {
+        // TODO implement assembler
+    }
+
+    /**
+     * Writes assembly code that effects the function command.
+     * @param functionName the name of the function to declare
+     * @param numLocals the number of local variables to instantiate
+     */
+    public void writeFunction(String functionName, int numLocals) {
+        // TODO implement assembler
+    }
 }
