@@ -12,6 +12,7 @@ public class CodeWriter implements Closeable {
     private String fileName;
     private int labelLogicNumber = 0;
     private String currentFunction = null;
+    private int returnAddressNumber = 0;
 
     /**
      * Opens the input file/stream and gets ready to write into it.
@@ -39,6 +40,7 @@ public class CodeWriter implements Closeable {
     public void writeArithmetic(String command) {
         switch (command) {
             case "add":
+                printWriter.println("// add");
                 addressTopmostStackElementAndStoreInDRegister();
 
                 // Retrieve second topmost element on stack and add it to register, and store result on second topmost
@@ -50,6 +52,7 @@ public class CodeWriter implements Closeable {
                 break;
 
             case "sub":
+                printWriter.println("// sub");
                 addressTopmostStackElementAndStoreInDRegister();
 
                 // Retrieve second topmost element on stack and subtract it from register, and store result on second
@@ -61,6 +64,7 @@ public class CodeWriter implements Closeable {
                 break;
 
             case "neg":
+                printWriter.println("// neg");
                 addressTopmostStackElementAndStoreInDRegister();
 
                 // Store in topmost element negative register, leave SP unaltered
@@ -68,18 +72,22 @@ public class CodeWriter implements Closeable {
                 break;
 
             case "eq":
+                printWriter.println("// eq");
                 generateLogicInstruction("JEQ");
                 break;
 
             case "gt":
+                printWriter.println("// gt");
                 generateLogicInstruction("JGT");
                 break;
 
             case "lt":
+                printWriter.println("// lt");
                 generateLogicInstruction("JLT");
                 break;
 
             case "and":
+                printWriter.println("// and");
                 addressTopmostStackElementAndStoreInDRegister();
 
                 // Retrieve second topmost element on stack and AND it to register, and store result on second topmost
@@ -91,6 +99,7 @@ public class CodeWriter implements Closeable {
                 break;
 
             case "or":
+                printWriter.println("// or");
                 addressTopmostStackElementAndStoreInDRegister();
 
                 // Retrieve second topmost element on stack and AND it to register, and store result on second topmost
@@ -102,6 +111,7 @@ public class CodeWriter implements Closeable {
                 break;
 
             case "not":
+                printWriter.println("// not");
                 addressTopmostStackElementAndStoreInDRegister();
 
                 // Store in topmost element negative register, leave SP unaltered
@@ -161,10 +171,12 @@ public class CodeWriter implements Closeable {
     public void writePushPop(VmCommand command, String segment, int index) {
         switch (command) {
             case C_PUSH:
+                printWriter.println(String.format("// push %s %s", segment, index));
                 pushValueOfSegmentOntoStack(segment, index);
                 break;
 
             case C_POP:
+                printWriter.println(String.format("// pop %s %s", segment, index));
                 popAndStoreInSegment(segment, index);
                 break;
 
@@ -331,7 +343,24 @@ public class CodeWriter implements Closeable {
      * the beginning of the output file.
      */
     public void writeInit() {
-        // TODO implement assembler
+        printWriter.println("// SP = 256");
+        printWriter.println("@256");
+        printWriter.println("D=A");
+        printWriter.println("@SP");
+        printWriter.println("M=D");
+
+        // Zero out pointers LCL, ARG, THIS, THAT
+        printWriter.println("// LCL, ARG, THIS, THAT = 0");
+        printWriter.println("@LCL");
+        printWriter.println("M=0");
+        printWriter.println("@ARG");
+        printWriter.println("M=0");
+        printWriter.println("@THIS");
+        printWriter.println("M=0");
+        printWriter.println("@THAT");
+        printWriter.println("M=0");
+
+        writeCall("Sys.init", 0);
     }
 
     /**
@@ -339,6 +368,7 @@ public class CodeWriter implements Closeable {
      * @param label the label string
      */
     public void writeLabel(String label) {
+        printWriter.println(String.format("// (%s)", label));
         printWriter.println(String.format("(%s$%s)", currentFunction, label));
     }
 
@@ -347,6 +377,7 @@ public class CodeWriter implements Closeable {
      * @param label the label string to jump to
      */
     public void writeGoto(String label) {
+        printWriter.println(String.format("// goto %s", label));
         printWriter.println(String.format("@%s$%s", currentFunction, label));
         printWriter.println(UNCONDITIONAL_JMP);
     }
@@ -356,6 +387,8 @@ public class CodeWriter implements Closeable {
      * @param label the label string to jump to
      */
     public void writeIf(String label) {
+        printWriter.println(String.format("// if-goto %s", label));
+
         // pop value from the stack
         addressSPMinusOffset(1);
         printWriter.println("D=M");
@@ -371,35 +404,50 @@ public class CodeWriter implements Closeable {
      * @param numArgs the number of arguments pushed to the stack
      */
     public void writeCall(String functionName, int numArgs) {
-        // push return-address
-        String returnAddressSymbol = String.format("%s_RETURN_ADDRESS", functionName);
-        pushPointerToStack(returnAddressSymbol);
+        printWriter.println(String.format("// call %s %d", functionName, numArgs));
+
+        String returnAddressSymbol = String.format("RETURN_ADDRESS_%d", returnAddressNumber);
+        pushReturnAddressToStack(returnAddressSymbol);
         pushPointerToStack("LCL");
         pushPointerToStack("ARG");
         pushPointerToStack("THIS");
         pushPointerToStack("THAT");
+
         // ARG = SP - n - 5
         loadSPInD();
         loadConstantInA(numArgs);
         printWriter.println("D=D-A");
-        loadConstantInA(5);
+        printWriter.println("@5");
         printWriter.println("D=D-A");
+        printWriter.println("@ARG");
         printWriter.println("M=D");
+
         // LCL = SP
         loadSPInD();
         printWriter.println("@LCL");
         printWriter.println("M=D");
+
         // goto f
         addressSymbol(functionName);
         printWriter.println(UNCONDITIONAL_JMP);
+
         // (return-address)
         printWriter.println(String.format("(%s)", returnAddressSymbol));
-        currentFunction = functionName;
+
+        returnAddressNumber++;
+    }
+
+    private void pushReturnAddressToStack(String returnAddressSymbol) {
+        addressSymbol(returnAddressSymbol);
+        printWriter.println("D=A");
+        addressSPMinusOffset(0);
+        printWriter.println("M=D");
+        increaseSP();
     }
 
     private void loadSPInD() {
         printWriter.println("@SP");
-        printWriter.println("D=A");
+        printWriter.println("D=M");
     }
 
     private void loadConstantInA(int constant) {
@@ -408,7 +456,7 @@ public class CodeWriter implements Closeable {
 
     private void pushPointerToStack(String symbol) {
         addressSymbol(symbol);
-        printWriter.println("D=A");
+        printWriter.println("D=M");
         addressSPMinusOffset(0);
         printWriter.println("M=D");
         increaseSP();
@@ -418,13 +466,15 @@ public class CodeWriter implements Closeable {
      * Writes assembly code that effects the return command.
      */
     public void writeReturn() {
+        printWriter.println("// return");
+
         // FRAME = LCL
         printWriter.println("@LCL");
         printWriter.println("D=M");
         printWriter.println("@R13"); // FRAME
         printWriter.println("M=D");
         // RET = *(FRAME-5)
-        loadConstantInA(5);
+        printWriter.println("@5");
         printWriter.println("A=D-A");
         printWriter.println("D=M");
         printWriter.println("@R14"); // RET
@@ -469,6 +519,7 @@ public class CodeWriter implements Closeable {
      * @param numLocals the number of local variables to instantiate
      */
     public void writeFunction(String functionName, int numLocals) {
+        printWriter.println(String.format("// function %s %d", functionName, numLocals));
         printWriter.println(String.format("(%s)", functionName));
 
         for (int i = 0; i < numLocals; i++) {
@@ -476,5 +527,7 @@ public class CodeWriter implements Closeable {
             printWriter.println("M=0");
             increaseSP();
         }
+
+        currentFunction = functionName;
     }
 }

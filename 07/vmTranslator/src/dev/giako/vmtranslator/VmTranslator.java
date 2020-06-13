@@ -47,6 +47,7 @@ public class VmTranslator {
                 var fileName = file.getName();
                 System.out.println(String.format("Parsing file: %s", fileName));
                 codeWriter.setFileName(fileName.replace(INPUT_FILENAME_EXT, ""));
+                codeWriter.writeInit();
                 parseFile(file, codeWriter);
                 System.out.println("Parsing done.");
             }
@@ -60,7 +61,6 @@ public class VmTranslator {
     private void parseFile(File file, CodeWriter codeWriter) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             Parser parser = new Parser(br);
-            codeWriter.writeInit();
 
             while (parser.hasMoreCommands()) {
                 switch (parser.getCommandType()) {
