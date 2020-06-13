@@ -7,6 +7,7 @@ import java.io.PrintWriter;
  * Translates VM commands into Hack assembly code.
  */
 public class CodeWriter implements Closeable {
+    public static final String UNCONDITIONAL_JMP = "0;JMP";
     private final PrintWriter printWriter;
     private String fileName;
     private int labelLogicNumber = 0;
@@ -139,7 +140,7 @@ public class CodeWriter implements Closeable {
         addressSPMinusOffset(2);
         printWriter.println("M=0");
         printWriter.println(String.format("@END_LOGIC_%d", labelLogicNumber));
-        printWriter.println("0;JMP");
+        printWriter.println(UNCONDITIONAL_JMP);
         printWriter.println(String.format("(LOGIC_%d)", labelLogicNumber));
         addressSPMinusOffset(2);
         printWriter.println("M=-1");
@@ -175,7 +176,7 @@ public class CodeWriter implements Closeable {
     }
 
     private void pushValueOfSegmentOntoStack(String segment, int index) {
-        printWriter.println(String.format("@%d", index));
+        loadConstantInA(index);
 
         // Store in D the value to push
         switch (segment) {
@@ -223,7 +224,7 @@ public class CodeWriter implements Closeable {
 
     private void retrieveValueFromSegmentAndStoreInD(String segmentPointer, boolean dereferenceSegmentPointer) {
         printWriter.println("D=A");
-        printWriter.println(String.format("@%s", segmentPointer));
+        addressSymbol(segmentPointer);
 
         if (dereferenceSegmentPointer) {
             printWriter.println("A=D+M");
@@ -298,15 +299,19 @@ public class CodeWriter implements Closeable {
     }
 
     private void calculateSegmentAndIndexAddress(String virtualRegister, int index, boolean dereferenceRegister) {
-        printWriter.println(String.format("@%d", index));
+        loadConstantInA(index);
         printWriter.println("D=A");
-        printWriter.println(String.format("@%s", virtualRegister));
+        addressSymbol(virtualRegister);
 
         if (dereferenceRegister) {
             printWriter.println("A=M");
         }
 
         printWriter.println("D=D+A");
+    }
+
+    private void addressSymbol(String symbol) {
+        printWriter.println(String.format("@%s", symbol));
     }
 
     private void increaseSP() {
@@ -343,7 +348,7 @@ public class CodeWriter implements Closeable {
      */
     public void writeGoto(String label) {
         printWriter.println(String.format("@%s$%s", currentFunction, label));
-        printWriter.println("0;JMP");
+        printWriter.println(UNCONDITIONAL_JMP);
     }
 
     /**
@@ -366,14 +371,96 @@ public class CodeWriter implements Closeable {
      * @param numArgs the number of arguments pushed to the stack
      */
     public void writeCall(String functionName, int numArgs) {
-        // TODO implement assembler
+        // push return-address
+        String returnAddressSymbol = String.format("%s_RETURN_ADDRESS", functionName);
+        pushPointerToStack(returnAddressSymbol);
+        pushPointerToStack("LCL");
+        pushPointerToStack("ARG");
+        pushPointerToStack("THIS");
+        pushPointerToStack("THAT");
+        // ARG = SP - n - 5
+        loadSPInD();
+        loadConstantInA(numArgs);
+        printWriter.println("D=D-A");
+        loadConstantInA(5);
+        printWriter.println("D=D-A");
+        printWriter.println("M=D");
+        // LCL = SP
+        loadSPInD();
+        printWriter.println("@LCL");
+        printWriter.println("M=D");
+        // goto f
+        addressSymbol(functionName);
+        printWriter.println(UNCONDITIONAL_JMP);
+        // (return-address)
+        printWriter.println(String.format("(%s)", returnAddressSymbol));
+        currentFunction = functionName;
+    }
+
+    private void loadSPInD() {
+        printWriter.println("@SP");
+        printWriter.println("D=A");
+    }
+
+    private void loadConstantInA(int constant) {
+        printWriter.println(String.format("@%d", constant));
+    }
+
+    private void pushPointerToStack(String symbol) {
+        addressSymbol(symbol);
+        printWriter.println("D=A");
+        addressSPMinusOffset(0);
+        printWriter.println("M=D");
+        increaseSP();
     }
 
     /**
      * Writes assembly code that effects the return command.
      */
     public void writeReturn() {
-        // TODO implement assembler
+        // FRAME = LCL
+        printWriter.println("@LCL");
+        printWriter.println("D=M");
+        printWriter.println("@R13"); // FRAME
+        printWriter.println("M=D");
+        // RET = *(FRAME-5)
+        loadConstantInA(5);
+        printWriter.println("A=D-A");
+        printWriter.println("D=M");
+        printWriter.println("@R14"); // RET
+        printWriter.println("M=D");
+        // *ARG = pop()
+        addressSPMinusOffset(1);
+        printWriter.println("D=M");
+        printWriter.println("@ARG");
+        printWriter.println("A=M");
+        printWriter.println("M=D");
+        decreaseSP();
+        // SP = ARG + 1
+        printWriter.println("@ARG");
+        printWriter.println("D=M+1");
+        printWriter.println("@SP");
+        printWriter.println("M=D");
+        // THAT = *(FRAME - 1)
+        dereferencePreviousElementInFrame("THAT");
+        // THIS = *(FRAME - 2)
+        dereferencePreviousElementInFrame("THIS");
+        // ARG = *(FRAME - 3)
+        dereferencePreviousElementInFrame("ARG");
+        // LCL = *(FRAME - 4)
+        dereferencePreviousElementInFrame("LCL");
+        // goto RET
+        printWriter.println("@R14");
+        printWriter.println("A=M");
+        printWriter.println(UNCONDITIONAL_JMP);
+    }
+
+    private void dereferencePreviousElementInFrame(String assignToSymbol) {
+        printWriter.println("@R13");
+        printWriter.println("AM=M-1");
+        printWriter.println("D=M");
+        addressSymbol(assignToSymbol);
+        printWriter.println("M=D");
     }
 
     /**
@@ -382,6 +469,12 @@ public class CodeWriter implements Closeable {
      * @param numLocals the number of local variables to instantiate
      */
     public void writeFunction(String functionName, int numLocals) {
-        // TODO implement assembler
+        printWriter.println(String.format("(%s)", functionName));
+
+        for (int i = 0; i < numLocals; i++) {
+            addressSPMinusOffset(0);
+            printWriter.println("M=0");
+            increaseSP();
+        }
     }
 }
