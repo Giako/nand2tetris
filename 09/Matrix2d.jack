@@ -1,0 +1,162 @@
+// 2d matrix class
+
+/** Class for 2d matrix calculations */
+class Matrix2d {
+    field Array matrix;
+    field int rows, columns;
+
+    /** Initialize the matrix */
+    constructor Matrix2d new(int nRows, int nColumns) {
+        var int i, j;
+        var Array currentRow;
+
+        let rows = nRows;
+        let columns = nColumns;
+        let matrix = Array.new(nRows);
+        let i = 0;
+
+        while(i < rows) {
+            let j = 0;
+
+            // set all to false
+            let matrix[i] = Array.new(columns);
+            let currentRow = matrix[i];
+
+            while (j < columns) {
+                let currentRow[j] = false;
+                let j = j + 1;
+            }
+
+            let i = i + 1;
+        }
+
+        return this;
+    }
+
+    method int getColumnsNo() {
+        return columns;
+    }
+
+    method int getRowsNo() {
+        return rows;
+    }
+
+    /** Dispose the matrix */
+    method void dispose() {
+        var int i; 
+        var Array currentRow;
+
+        let i = 0;
+
+        while(i < rows) {
+            let currentRow = matrix[i];
+            do currentRow.dispose();
+            let i = i + 1;
+        }
+
+        do matrix.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method void set(int i, int j, boolean value) {
+        var int currentRow;
+        
+        let currentRow = matrix[i];
+        let currentRow[j] = value;
+
+        return;
+    }
+
+    method boolean get(int i, int j) {
+        var int currentRow;
+        
+        let currentRow = matrix[i];
+
+        return currentRow[j];
+    }
+
+    method void rotate() {
+        var int i, j, temp;
+        var boolean value;
+        var Matrix2d tempMatrix;
+        var Array currentRow;
+
+        let tempMatrix = clone();
+        let i = 0;
+
+        while (i < rows) {
+            let currentRow = matrix[i]; 
+            let j = 0;
+
+            while (j < columns) {
+                let value = tempMatrix.get(columns - j - 1, i);
+                let currentRow[j] = value;
+                let j = j + 1;
+            }
+
+            let i = i + 1;
+        }
+
+        do tempMatrix.dispose();
+        let temp = columns;
+        let columns = rows;
+        let rows = temp;
+
+        return;
+    }
+
+    method Matrix2d clone() {
+        var Matrix2d newMatrix;
+        var int i, j;
+        var boolean value;
+        
+        let newMatrix = Matrix2d.new(rows, columns);
+
+        let i = 0;
+
+        while (i < rows) {
+            let j = 0;
+
+            while (j < columns) {
+                let value = get(i, j);
+                do newMatrix.set(i, j, value);
+                let j = j + 1;
+            }
+
+            let i = i + 1;
+        }
+
+        return newMatrix;
+    }
+
+    /** delete a row, shifting upper rows by 1. First row is all false. */
+    method void deleteRow(int i) {
+        var int rowNumber, j;
+        var Array firstRow;
+        var Array rowToDispose;
+
+        let rowNumber = i;
+        let rowToDispose = matrix[i];
+        do rowToDispose.dispose();
+
+        while(rowNumber > 0) {
+            let matrix[rowNumber] = matrix[rowNumber - 1];
+            let rowNumber = rowNumber - 1;
+        }
+
+        let firstRow = matrix[0];
+        do firstRow.dispose();
+        let matrix[0] = Array.new(columns);
+        let firstRow = matrix[0];
+        let j = 0;
+
+        while(j < columns) {
+            let firstRow[j] = false;
+            let j = j + 1;
+        }
+
+        let rows = rows - 1;
+        return;
+    }
+}

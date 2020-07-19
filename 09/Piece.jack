@@ -1,0 +1,262 @@
+// Piece class
+
+/**
+ * The current piece
+ */
+class Piece {
+    field int type; // 0 -> I, 1 -> T, 2 -> L, 3 -> O, 4 -> S, 5 -> Z, 6 -> J
+    field int x,y; // upper left coordinates of the piece on the board
+    field Matrix2d blocks;
+
+    /** Create the game board */
+    constructor Piece new(int aType) {
+       let type = aType;
+       let y = 0;
+       let x = 3;
+       let blocks = Matrix2d.new(4, 4);
+
+       do populateBlocks();
+
+       return this;
+    }
+
+    method Matrix2d getBlocks() {
+        return blocks;
+    }
+
+    method int getHeight() {
+        return blocks.getRowsNo();
+    }
+
+    method int getWidth() {
+        return blocks.getColumnsNo();
+    }
+
+    method void populateBlocks() {
+        if (type = 0) {
+            do blocks.set(2, 0, true);
+            do blocks.set(2, 1, true);
+            do blocks.set(2, 2, true);
+            do blocks.set(2, 3, true);
+        } 
+        if (type = 1) {
+            do blocks.set(1, 1, true);
+            do blocks.set(2, 0, true);
+            do blocks.set(2, 1, true);
+            do blocks.set(2, 2, true);
+        } 
+        if (type = 2) {
+            do blocks.set(1, 2, true);
+            do blocks.set(2, 0, true);
+            do blocks.set(2, 1, true);
+            do blocks.set(2, 2, true);
+        } 
+        if (type = 3) {
+            do blocks.set(1, 1, true);
+            do blocks.set(1, 2, true);
+            do blocks.set(2, 1, true);
+            do blocks.set(2, 2, true);
+        } 
+        if (type = 4) {
+            do blocks.set(1, 1, true);
+            do blocks.set(1, 2, true);
+            do blocks.set(2, 0, true);
+            do blocks.set(2, 1, true);
+        } 
+        if (type = 5) {
+            do blocks.set(1, 0, true);
+            do blocks.set(1, 1, true);
+            do blocks.set(2, 1, true);
+            do blocks.set(2, 2, true);
+        } 
+        if (type = 6) {
+            do blocks.set(2, 0, true);
+            do blocks.set(3, 0, true);
+            do blocks.set(3, 1, true);
+            do blocks.set(3, 2, true);
+        } 
+
+        return;
+    }
+
+    /** Dispose the board */
+    method void dispose() {
+       do blocks.dispose();
+       do Memory.deAlloc(this);
+
+       return;
+    }
+
+    /** Rotate piece */
+    method void rotate() {
+        do blocks.rotate();
+
+        return;
+    }
+
+    /** Move piece */
+    method void move(int dx, int dy, Board board) {
+        var boolean canMove, currentBlock, outOfBounds;
+        var int newX, newY, i, j;
+
+        let i = 0;
+        let canMove = true;
+
+        while(i < blocks.getRowsNo()) {
+            let j = 0;
+            let newY = y + dy + i;
+
+            while (j < blocks.getColumnsNo()) {
+                let newX = x + dx + j;
+                let outOfBounds = false;
+                let currentBlock = blocks.get(i, j);
+
+                if (((newX < 0) | (newX > 9)) | ((newY < 0) |
+                    (newY > 19))) {
+                    let outOfBounds = true;
+                }
+
+                if ((~outOfBounds) & currentBlock) {
+                    if (board.getMatrix(newX, newY) = true) {
+                        let canMove = false;
+                    }
+                }
+
+                if (outOfBounds & currentBlock) {
+                    let canMove = false;
+                }
+
+                let j = j + 1;
+            }
+
+
+            let i = i + 1;
+        }
+
+        if (canMove) {
+            let x = x + dx;
+            let y = y + dy;
+        }
+        
+        return;
+    }
+
+    /** Draw piece */
+    method void draw() {
+        // every block is a square of 10 x 10 pixels wide
+        var int i, j;
+
+        let i = 0;
+        do Screen.setColor(true);
+
+        while (i < blocks.getRowsNo()) {
+            let j = 0;
+
+            while (j < blocks.getColumnsNo()) {
+                if (blocks.get(i, j) = true) {
+                   do Screen.drawRectangle((x + j) * 10, (y + i) * 10, ((x + j + 1) * 10) - 1, ((y + i + 1) * 10) - 1);
+                }
+
+                let j = j + 1;
+            }
+
+            let i = i + 1;
+        }
+
+        return;
+    }
+
+    /** Verify if piece is in place */
+    method boolean isInPlace(Board board) {
+        var int i, j, checkX, checkY;
+        var boolean currentBlock, skip;
+
+        let i = 0;
+
+        while(i < blocks.getRowsNo()) {
+            let j = 0;
+            let checkY = y + i + 1;
+
+            while (j < blocks.getColumnsNo()) {
+                let skip = false;
+                let currentBlock = blocks.get(i, j);
+
+                if (currentBlock & (checkY > 19)) {
+                    return true;
+                }
+
+                let checkX = x + j;
+
+                if ((checkX < 0) | (checkX > 9)) {
+                    let skip = true;
+                }
+
+                if ((checkY < 0) | (checkY > 19)) {
+                    let skip = true;
+                }
+
+                if (~skip) {
+                    if (currentBlock & (board.getMatrix(checkX, checkY) = true)) {
+                        return true;
+                    }
+                }
+
+                let j = j + 1;
+            }
+
+            let i = i + 1;
+        }
+
+        return false;
+    }
+
+    method boolean isGameOver(Board board) {
+        var int i, j;
+
+        if (~((x = 3) & (y = 0))) {
+            return false;
+        }
+
+        // if any of the true elements of a piece is colliding with the board
+        let i = 0;
+
+        while(i < blocks.getRowsNo()) {
+            let j = 0;
+
+            while (j < blocks.getColumnsNo()) {
+                if ((blocks.get(i, j) = true) & (board.getMatrix(x + j, y + i) = true)) {
+                    return true;
+                }
+
+                let j = j + 1;
+            }
+
+
+            let i = i + 1;
+        }
+
+        return false;
+    }
+    
+    method void addToBoard(Board board) {
+        var int i, j;
+
+        let i = 0;
+
+        while (i < blocks.getRowsNo()) {
+            let j = 0;
+
+            while (j < blocks.getColumnsNo()) {
+                if (blocks.get(i, j) = true) {
+                    do board.setMatrix(j + x, i + y, true);
+                }
+
+                let j = j + 1;
+            }
+            
+            let i = i + 1;
+        }
+
+        return;
+    }
+}

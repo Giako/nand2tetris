@@ -1,0 +1,119 @@
+// TetrisGame class
+
+/**
+ * Implement a simple Tetris game
+ */
+class TetrisGame {
+    field int direction; // current direction: 0 -> none, 1 -> left, 2 -> right, -> 3 down
+    field int nextPiece; 
+    field Board board;
+    field Piece piece;
+    field int difficulty;
+    field int timer;
+    field boolean exit;
+
+    /**
+     * Construct the game
+     */
+    constructor TetrisGame new() {
+        let direction = 0;
+        let difficulty = 1000;
+        let timer = 0;
+        let nextPiece = 0;
+        let board = Board.new();
+        let piece = Piece.new(nextPiece);
+        let exit = false;
+
+        return this;
+    }
+
+    /**
+     * Dispose the game
+     */
+    method void dispose() {
+        do board.dispose();
+        do piece.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+
+    /**
+     * Run the game
+     */
+    method void run() {
+        var char key;
+
+        while (~exit) {
+            let key = Keyboard.keyPressed();
+
+            if (key = 0) { let direction = 0; } // no key pressed
+            if (key = 81) { let exit = true; } // q key
+            if (key = 133) { let direction = 3; } // down arrow
+            if (key = 130) { let direction = 1; } // left arrow
+            if (key = 132) { let direction = 2; } // right arrow
+            if (key = 131) { do piece.rotate(); } // up arrow
+
+            do movePiece();
+            do Sys.wait(500);
+        }
+
+        return;
+    }
+
+    /**
+     * Move current piece
+     */
+    method void movePiece() {
+        // move piece
+        if (direction = 0) {
+            do piece.move(0, 1, board);
+        }
+
+        if (direction = 1) {
+            do piece.move(-1, 1, board);
+        } 
+
+        if (direction = 2) {
+            do piece.move(1, 1, board);
+        } 
+
+        if (direction = 3) {
+            do piece.move(0, 2, board);
+        } 
+
+        // manage timer
+        let timer = timer + 1;
+
+        if (timer > difficulty) {
+            do piece.move(0, 1, board);    
+            let timer = 0;
+        }
+
+        // if piece is in place, decrease difficulty by 10
+        if (piece.isInPlace(board) = true) {
+            do piece.addToBoard(board);
+            do board.deleteRows();
+
+            let nextPiece = nextPiece + 1;
+
+            if (nextPiece = 7) {
+                let nextPiece = 0;
+            }
+
+            do piece.dispose();
+
+            let piece = Piece.new(nextPiece);
+            let difficulty = difficulty - 10;
+
+            if (piece.isGameOver(board)) {
+                let exit = true;
+            }
+        }
+
+        do board.draw();
+        do piece.draw();
+
+        return;
+    }
+}

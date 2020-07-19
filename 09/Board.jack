@@ -1,0 +1,96 @@
+// Board class
+
+/**
+ * The game board (10x20 array) with blocks
+ */
+class Board {
+    field Matrix2d matrix;
+
+    /** Create the game board */
+    constructor Board new() {
+       // Initialize game board to 0
+       var int i, j;
+       var Array currentRow;
+
+       let matrix = Matrix2d.new(20, 10);
+
+       return this;
+    }
+
+    /** Dispose the board */
+    method void dispose() {
+       do matrix.dispose();
+       do Memory.deAlloc(this);
+       return;
+    }
+
+    method boolean getMatrix(int x, int y) {
+        if ((x < 0) | (x > 9)) { do Sys.error(700 + x); }
+        if ((y < 0) | (y > 19)) { do Sys.error(801 + y); }
+
+        return matrix.get(y, x);
+    }
+
+    method void setMatrix(int x, int y, boolean value) {
+        do matrix.set(y, x, value);
+        return;
+    }
+    
+    /** Draw the board on screen */
+    method void draw() {
+        // every block is a square of 10 x 10 pixels wide
+        var int i, j;
+
+        // clear screen and draw borders
+        do Screen.clearScreen();
+        do Screen.setColor(true);
+        do Screen.drawLine(0, 201, 101, 201);
+        do Screen.drawLine(101, 0, 101, 201);
+
+        let i = 0;
+
+        while (i < 20) {
+            let j = 0;
+
+            while (j < 10) {
+                if (matrix.get(i, j) = true) {
+                   do Screen.drawRectangle(j * 10, i * 10, ((j + 1) * 10) - 1, ((i + 1) * 10) - 1);
+                }
+
+                let j = j + 1;
+            }
+
+            let i = i + 1;
+        }
+
+        return;
+    }
+
+    method void deleteRows() {
+        var int i, j;
+        var boolean fullLine;
+
+        let i = 0;
+
+        while (i < 20) {
+            let j = 0;
+            let fullLine = true;
+
+            while ((j < 10) & fullLine) {
+                if (matrix.get(i, j) = false) {
+                   let fullLine = false;
+                }
+
+                let j = j + 1;
+            }
+
+            if (fullLine) {
+                do matrix.deleteRow(i);
+            }
+
+            let i = i + 1;
+        }
+
+        return;
+    }
+}
