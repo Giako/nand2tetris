@@ -89,7 +89,43 @@ class Piece {
 
     /** Rotate piece */
     method void rotate() {
+        var int firstNonEmptyColumn, lastNonEmptyColumn, i, j;
+        var boolean continueFirst;
+
+        let firstNonEmptyColumn = 0;
+        let lastNonEmptyColumn = 0;
+        let continueFirst = true;
+
+        let i = 0;
+
+        while (i < blocks.getRowsNo()) {
+            let j = 0;
+
+            while (j < blocks.getColumnsNo()) {
+                if (blocks.get(i, j) = true) {
+                    if (continueFirst) {
+                        let firstNonEmptyColumn = i;
+                        let continueFirst = false;
+                    }
+
+                    let lastNonEmptyColumn = i;
+                } 
+                let j = j + 1;
+            }
+
+            let i = i + 1;
+        }
+
         do blocks.rotate();
+
+        // move right if non empty column is outside
+        if (x + firstNonEmptyColumn < 0) {
+            let x = -firstNonEmptyColumn;
+        }
+
+        if (x + lastNonEmptyColumn > 9) {
+            let x = 9 - lastNonEmptyColumn;
+        }
 
         return;
     }
